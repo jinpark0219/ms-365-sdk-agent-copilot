@@ -1,0 +1,8 @@
+microsoft-agents-hosting-aiohttp==0.9.1
+microsoft-agents-hosting-core==0.9.1
+microsoft-agents-activity==0.9.1
+aiohttp==3.13.5
+openai==2.36.0
+python-dotenv==1.2.2
+faiss-cpu==1.13.2
+numpy==2.4.4
