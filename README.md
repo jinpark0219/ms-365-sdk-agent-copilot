@@ -83,9 +83,7 @@ Azure AI Foundry でチャットモデルと埋め込みモデルをデプロイ
 
 ### 1. Python 仮想環境の作成
 
-**Windows (PowerShell):**
-
-Python 3.11 がインストールされている場合:
+PowerShell で以下を実行します。
 
 ```powershell
 py -3.11 -m venv .venv
@@ -100,14 +98,7 @@ PowerShell の実行ポリシーエラーが出る場合は、以下を一度だ
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ```
 
-**macOS / Linux:**
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-```
-
-**活性化の確認:**
+活性化の確認:
 
 ```powershell
 python --version    # Python 3.11.x と表示されること
@@ -308,16 +299,8 @@ aiohttp はデフォルトでホットリロードに対応していません。
 
 `Ctrl+Z` で誤って一時停止した場合に発生しがちです。以下で残存プロセスを終了します。
 
-**Windows (PowerShell):**
-
 ```powershell
 Get-NetTCPConnection -LocalPort 3978 | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
-```
-
-**macOS / Linux:**
-
-```bash
-lsof -ti:3978 | xargs kill -9
 ```
 
 ### `AttributeError: 'NoneType' object has no attribute 'ANONYMOUS_ALLOWED'`
