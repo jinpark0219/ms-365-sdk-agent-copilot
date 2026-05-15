@@ -1,20 +1,32 @@
+# Python
 .venv/
+venv/
+env/
 __pycache__/
 *.py[cod]
 *$py.class
-.env
-.env.local
-.env.*.local
-*.log
-.DS_Store
-.vscode/
+*.egg-info/
+dist/
+build/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-dist/
-build/
-*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
 
 # 生成された RAG インデックス(build_index.py で再生成可能)
 index/
-
