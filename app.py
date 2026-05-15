@@ -30,9 +30,6 @@ AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
 AZURE_OPENAI_CHAT_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.getenv(
-    "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"
-)
 
 # --- 検索する関連文書数 ---
 TOP_K = 5
@@ -84,19 +81,12 @@ async def on_message(context: TurnContext, _: TurnState):
         return
 
     try:
-        client = _get_azure_openai_client()
-
         # 1. RAG 検索: ユーザー質問に関連する社内文書チャンクを取得
-        results = await rag_index.search(
-            client=client,
-            embedding_deployment=AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
-            query=user_text,
-            k=TOP_K,
-        )
+        results = await rag_index.search(query=user_text, k=TOP_K)
         context_text = format_context(results)
 
         # 2. LLM 呼び出し: コンテキスト + ユーザー質問
-        completion = await client.chat.completions.create(
+        completion = await _get_azure_openai_client().chat.completions.create(
             model=AZURE_OPENAI_CHAT_DEPLOYMENT,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},

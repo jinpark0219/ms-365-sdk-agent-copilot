@@ -6,3 +6,6 @@ openai==2.36.0
 python-dotenv==1.2.2
 faiss-cpu==1.13.2
 numpy==2.4.4
+langchain-community==0.4.1
+langchain-openai==1.2.1
+langchain-text-splitters==1.1.2

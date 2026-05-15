@@ -1,18 +1,17 @@
 """社内文書をチャンキング・埋め込み・FAISS インデックス化するスクリプト。
 
+LangChain を使用してチャンキング・埋め込み・ベクトルストア保存を行う。
+
 実行: .venv/bin/python build_index.py
-出力: index/chunks.json + index/faiss.index
+出力: index/  (LangChain FAISS 形式: index.faiss + index.pkl)
 """
-import asyncio
-import json
 import os
-import re
 from pathlib import Path
 
-import faiss
-import numpy as np
 from dotenv import load_dotenv
-from openai import AsyncAzureOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain_openai import AzureOpenAIEmbeddings
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 
 load_dotenv()
 
@@ -21,10 +20,8 @@ PROJECT_ROOT = Path(__file__).parent
 DOCS_DIR = PROJECT_ROOT / "sample-docs"
 INDEX_DIR = PROJECT_ROOT / "index"
 INDEX_DIR.mkdir(exist_ok=True)
-CHUNKS_FILE = INDEX_DIR / "chunks.json"
-FAISS_FILE = INDEX_DIR / "faiss.index"
 
-# --- Azure OpenAI 設定 ---
+# --- Azure OpenAI 埋め込み設定 ---
 AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
@@ -32,120 +29,52 @@ AZURE_OPENAI_EMBEDDING_DEPLOYMENT = os.getenv(
     "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"
 )
 
-# 埋め込み API の1回あたり最大入力数(API 制約に余裕を持たせる)
-EMBEDDING_BATCH_SIZE = 50
+# --- マークダウン分割設定 ---
+# H2/H3 ヘッダ単位でチャンク化(ヘッダはメタデータと本文の両方に保持)
+splitter = MarkdownHeaderTextSplitter(
+    headers_to_split_on=[("##", "h2"), ("###", "h3")],
+    strip_headers=False,
+)
 
 
-def chunk_markdown(text: str, source: str) -> list[dict]:
-    """マークダウンを H2/H3 単位で意味的にチャンキングする。
-
-    - H3 がある H2 セクションは H3 ごとにチャンク(H2 タイトルを文頭に付与)
-    - H3 がない H2 セクションは H2 全体を1チャンクに
-    - 50文字未満のチャンクは破棄(意味のあるテキストのみ残す)
-    """
-    chunks: list[dict] = []
-
-    # H2 ヘッダで大きく分割(各セクションは "## " で始まる)
-    h2_blocks = re.split(r"\n(?=## )", text)
-
-    for h2_block in h2_blocks:
-        if not h2_block.strip().startswith("## "):
-            # 文書冒頭(H1 とその前後)はスキップ
-            continue
-
-        h2_title = h2_block.split("\n", 1)[0].lstrip("# ").strip()
-
-        # H3 でさらに分割を試みる
-        h3_parts = re.split(r"\n(?=### )", h2_block)
-
-        if len(h3_parts) <= 1:
-            # H3 なし → H2 全体を1チャンクに
-            content = h2_block.strip()
-            if len(content) >= 50:
-                chunks.append(
-                    {
-                        "text": content,
-                        "source": source,
-                        "section": h2_title,
-                    }
-                )
-        else:
-            # H3 ごとにチャンク化(h3_parts[0] は H2 ヘッダ + 導入文なのでスキップ)
-            for h3_part in h3_parts[1:]:
-                h3_title = h3_part.split("\n", 1)[0].lstrip("# ").strip()
-                # H2 タイトルを文頭に付与してコンテキストを保持
-                content = f"# {h2_title}\n\n{h3_part.strip()}"
-                if len(content) >= 50:
-                    chunks.append(
-                        {
-                            "text": content,
-                            "source": source,
-                            "section": f"{h2_title} > {h3_title}",
-                        }
-                    )
-
-    return chunks
-
-
-async def embed_batch(
-    client: AsyncAzureOpenAI, deployment: str, texts: list[str]
-) -> list[list[float]]:
-    """テキストのバッチを埋め込みベクトルに変換する。"""
-    response = await client.embeddings.create(model=deployment, input=texts)
-    return [d.embedding for d in response.data]
-
-
-async def main():
+def main():
     # --- 1. 文書を読み込みチャンク化 ---
-    all_chunks: list[dict] = []
+    all_docs = []
     md_files = sorted(DOCS_DIR.glob("*.md"))
     print(f"📂 対象文書: {len(md_files)} 件")
 
     for md_file in md_files:
         text = md_file.read_text(encoding="utf-8")
-        chunks = chunk_markdown(text, source=md_file.name)
-        print(f"  - {md_file.name}: {len(chunks)} チャンク")
-        all_chunks.extend(chunks)
+        docs = splitter.split_text(text)
 
-    print(f"📦 合計チャンク数: {len(all_chunks)}")
+        # 各チャンクに「出典ファイル名」と「H2 タイトルを文頭に付与」を追加
+        # (H2 を本文に含めることで、H3 だけのチャンクでも親カテゴリの文脈が保持される)
+        for doc in docs:
+            doc.metadata["source"] = md_file.name
+            h2 = doc.metadata.get("h2", "")
+            if h2 and not doc.page_content.startswith(f"# {h2}"):
+                doc.page_content = f"# {h2}\n\n{doc.page_content}"
 
-    # --- 2. Azure OpenAI で埋め込みを生成 ---
-    client = AsyncAzureOpenAI(
+        print(f"  - {md_file.name}: {len(docs)} チャンク")
+        all_docs.extend(docs)
+
+    print(f"📦 合計チャンク数: {len(all_docs)}")
+
+    # --- 2. Azure OpenAI 埋め込みで FAISS インデックスを構築 ---
+    print(f"🔢 埋め込み生成 + FAISS インデックス構築中...")
+    embeddings = AzureOpenAIEmbeddings(
         azure_endpoint=AZURE_OPENAI_ENDPOINT,
         api_key=AZURE_OPENAI_API_KEY,
         api_version=AZURE_OPENAI_API_VERSION,
+        azure_deployment=AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
     )
+    vectorstore = FAISS.from_documents(all_docs, embeddings)
+    print(f"🔍 FAISS インデックス構築完了: {vectorstore.index.ntotal} ベクトル")
 
-    print(f"🔢 埋め込み生成中(モデル: {AZURE_OPENAI_EMBEDDING_DEPLOYMENT})...")
-    all_vectors: list[list[float]] = []
-    for i in range(0, len(all_chunks), EMBEDDING_BATCH_SIZE):
-        batch = all_chunks[i : i + EMBEDDING_BATCH_SIZE]
-        texts = [c["text"] for c in batch]
-        vectors = await embed_batch(client, AZURE_OPENAI_EMBEDDING_DEPLOYMENT, texts)
-        all_vectors.extend(vectors)
-        print(f"  - バッチ {i // EMBEDDING_BATCH_SIZE + 1}: {len(batch)} 件完了")
-
-    vectors_array = np.array(all_vectors, dtype=np.float32)
-    print(f"📐 ベクトル次元: {vectors_array.shape}")
-
-    # --- 3. FAISS インデックス構築(コサイン類似度) ---
-    # L2 正規化することで内積 = コサイン類似度として扱える
-    faiss.normalize_L2(vectors_array)
-
-    dim = vectors_array.shape[1]
-    index = faiss.IndexFlatIP(dim)  # 内積(Inner Product)ベース
-    index.add(vectors_array)
-    print(f"🔍 FAISS インデックス構築完了: {index.ntotal} ベクトル")
-
-    # --- 4. ディスク保存 ---
-    CHUNKS_FILE.write_text(
-        json.dumps(all_chunks, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    faiss.write_index(index, str(FAISS_FILE))
-    print(f"💾 保存完了:")
-    print(f"  - {CHUNKS_FILE}")
-    print(f"  - {FAISS_FILE}")
+    # --- 3. ディスクへ保存 ---
+    vectorstore.save_local(str(INDEX_DIR))
+    print(f"💾 保存完了: {INDEX_DIR}/ (index.faiss + index.pkl)")
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
