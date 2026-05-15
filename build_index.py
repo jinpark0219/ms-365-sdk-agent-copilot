@@ -41,7 +41,7 @@ def main():
     # --- 1. 文書を読み込みチャンク化 ---
     all_docs = []
     md_files = sorted(DOCS_DIR.glob("*.md"))
-    print(f"📂 対象文書: {len(md_files)} 件")
+    print(f"対象文書: {len(md_files)} 件")
 
     for md_file in md_files:
         text = md_file.read_text(encoding="utf-8")
@@ -58,10 +58,10 @@ def main():
         print(f"  - {md_file.name}: {len(docs)} チャンク")
         all_docs.extend(docs)
 
-    print(f"📦 合計チャンク数: {len(all_docs)}")
+    print(f"合計チャンク数: {len(all_docs)}")
 
     # --- 2. Azure OpenAI 埋め込みで FAISS インデックスを構築 ---
-    print(f"🔢 埋め込み生成 + FAISS インデックス構築中...")
+    print(f"埋め込み生成 + FAISS インデックス構築中...")
     embeddings = AzureOpenAIEmbeddings(
         azure_endpoint=AZURE_OPENAI_ENDPOINT,
         api_key=AZURE_OPENAI_API_KEY,
@@ -69,11 +69,11 @@ def main():
         azure_deployment=AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
     )
     vectorstore = FAISS.from_documents(all_docs, embeddings)
-    print(f"🔍 FAISS インデックス構築完了: {vectorstore.index.ntotal} ベクトル")
+    print(f"FAISS インデックス構築完了: {vectorstore.index.ntotal} ベクトル")
 
     # --- 3. ディスクへ保存 ---
     vectorstore.save_local(str(INDEX_DIR))
-    print(f"💾 保存完了: {INDEX_DIR}/ (index.faiss + index.pkl)")
+    print(f"保存完了: {INDEX_DIR}/ (index.faiss + index.pkl)")
 
 
 if __name__ == "__main__":

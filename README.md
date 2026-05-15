@@ -155,13 +155,13 @@ python build_index.py
 実行後、以下のような出力が表示されます。
 
 ```
-📂 対象文書: 2 件
+対象文書: 2 件
   - hr-policy-guide-ja.md: 46 チャンク
   - it-helpdesk-guide-ja.md: 32 チャンク
-📦 合計チャンク数: 78
-🔢 埋め込み生成 + FAISS インデックス構築中...
-🔍 FAISS インデックス構築完了: 78 ベクトル
-💾 保存完了: index/ (index.faiss + index.pkl)
+合計チャンク数: 78
+埋め込み生成 + FAISS インデックス構築中...
+FAISS インデックス構築完了: 78 ベクトル
+保存完了: index/ (index.faiss + index.pkl)
 ```
 
 `index/` フォルダが作成され、`index.faiss` と `index.pkl` が保存されます。
