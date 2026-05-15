@@ -70,8 +70,7 @@ def chunk_markdown(text: str, source: str) -> list[dict]:
                     }
                 )
         else:
-            # H3 ごとにチャンク化(最初の h3_parts[0] は H2 ヘッダ + 導入文)
-            h2_intro = h3_parts[0].strip()
+            # H3 ごとにチャンク化(h3_parts[0] は H2 ヘッダ + 導入文なのでスキップ)
             for h3_part in h3_parts[1:]:
                 h3_title = h3_part.split("\n", 1)[0].lstrip("# ").strip()
                 # H2 タイトルを文頭に付与してコンテキストを保持
