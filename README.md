@@ -50,11 +50,6 @@ gh repo clone <OWNER>/<REPO>
 cd <REPO>
 ```
 
-> 📌 `<OWNER>/<REPO>` は実際のリポジトリパスに置き換えてください。
-> 個人検証段階の URL は `jinpark0219/ms-365-sdk-agent-copilot` です(社内移管後は所属組織のリポジトリ URL に変更されます)。
-
----
-
 ## Azure AI Foundry のセットアップ
 
 Azure AI Foundry でチャットモデルと埋め込みモデルをデプロイし、エンドポイントと API キーを取得します。
@@ -97,7 +92,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-> 💡 システムに Python 3.12 など複数バージョンが混在する場合は、必ず `py -3.11` で 3.11 を明示してください。`python -m venv` だけだと既定バージョン(3.12 等)で venv が作成され、SDK が正しく動作しない可能性があります。
+注意: システムに Python 3.12 など複数バージョンが混在する場合は、必ず `py -3.11` で 3.11 を明示してください。`python -m venv` だけだと既定バージョン (3.12 等) で venv が作成され、SDK が正しく動作しない可能性があります。
 
 PowerShell の実行ポリシーエラーが出る場合は、以下を一度だけ実行してください。
 
@@ -138,7 +133,7 @@ copy .env.example .env
 notepad .env
 ```
 
-> 🔴 **必ず実際の値を埋めてください。** `copy` 直後の `.env` は空のテンプレートのままで、値を埋めずに次の手順に進むと `build_index.py` が `openai.OpenAIError: Missing credentials` で失敗します。
+注意: 必ず実際の値を入力してください。`copy` 直後の `.env` は空のテンプレートのままで、値を入力せずに次の手順に進むと `build_index.py` が `openai.OpenAIError: Missing credentials` で失敗します。
 
 設定する項目:
 
@@ -156,7 +151,7 @@ AZURE_OPENAI_EMBEDDING_DEPLOYMENT=<埋め込みモデルのデプロイ名>
 type .env
 ```
 
-> ⚠️ `.env` は `.gitignore` 対象です。API キーをリポジトリにコミットしないようご注意ください。
+注意: `.env` は `.gitignore` 対象です。API キーをリポジトリにコミットしないよう注意してください。
 
 ### 4. ナレッジ文書のインデックス構築
 
@@ -236,7 +231,7 @@ python build_index.py
 
 再構築後、`python app.py` を再起動するとインデックスが反映されます。
 
-> 💡 文書を追加するだけの場合も再構築は必須です (差分インデックスは未対応)。
+注意: 文書を追加するだけの場合も再構築は必須です (差分インデックスは未対応)。
 
 ---
 
@@ -384,7 +379,7 @@ python --version    # Python 3.11.x
 pip install -r requirements.txt
 ```
 
-> 💡 Windows の Python launcher (`py`) は複数バージョンを管理できます。`py --list` で利用可能なバージョン一覧を確認できます。
+補足: Windows の Python launcher (`py`) は複数バージョンを管理できます。`py --list` で利用可能なバージョン一覧を確認できます。
 
 ---
 
