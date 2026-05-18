@@ -109,6 +109,18 @@ if __name__ == "__main__":
     # 起動時にインデックスを読み込む(失敗時は早期に検知)
     rag_index.load()
     try:
-        start_server(AGENT_APP, AgentAuthConfiguration(anonymous_allowed=True))
+        # Entra ID で発行された JWT を検証する
+        # - CLIENT_ID: Bot Service が送ってくる token の aud(audience)
+        # - TENANT_ID: token 発行元テナントの限定
+        # - CLIENT_SECRET: Agent 側が outbound 通信時に使用
+        start_server(
+            AGENT_APP,
+            AgentAuthConfiguration(
+                anonymous_allowed=False,
+                client_id=os.getenv("CLIENT_ID"),
+                client_secret=os.getenv("CLIENT_SECRET"),
+                tenant_id=os.getenv("TENANT_ID"),
+            ),
+        )
     except Exception as error:
         raise error
