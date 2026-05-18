@@ -13,16 +13,44 @@ from microsoft_agents.hosting.core import (
     TurnState,
     TurnContext,
     MemoryStorage,
+    RestChannelServiceClientFactory,
 )
 from microsoft_agents.hosting.aiohttp import CloudAdapter
+from microsoft_agents.authentication.msal import MsalConnectionManager
 from openai import AsyncAzureOpenAI
 
 from rag import rag_index, format_context
 from start_server import start_server
 
 
+# --- Entra ID で発行された JWT を検証 + outbound 通信用の token を発行 ---
+# CLIENT_ID:     Bot Service が送る token の aud (audience)
+# TENANT_ID:     token 発行元テナント
+# CLIENT_SECRET: outbound 通信時の credentials
+SERVICE_AUTH_CONFIG = AgentAuthConfiguration(
+    anonymous_allowed=False,
+    client_id=os.getenv("CLIENT_ID"),
+    client_secret=os.getenv("CLIENT_SECRET"),
+    tenant_id=os.getenv("TENANT_ID"),
+)
+
+# MsalConnectionManager は connections_configurations の中で
+# "SERVICE_CONNECTION" という名前のエントリを必須とする(SDK の hard-coded 規約)
+CONNECTION_MANAGER = MsalConnectionManager(
+    connections_configurations={"SERVICE_CONNECTION": SERVICE_AUTH_CONFIG}
+)
+
+# Bot Service へ送り返す activity 用の HTTP client factory
+CHANNEL_SERVICE_FACTORY = RestChannelServiceClientFactory(
+    connection_manager=CONNECTION_MANAGER
+)
+
 AGENT_APP = AgentApplication[TurnState](
-    storage=MemoryStorage(), adapter=CloudAdapter()
+    storage=MemoryStorage(),
+    adapter=CloudAdapter(
+        connection_manager=CONNECTION_MANAGER,
+        channel_service_client_factory=CHANNEL_SERVICE_FACTORY,
+    ),
 )
 
 # --- Azure OpenAI / Foundry 設定 ---
@@ -109,18 +137,7 @@ if __name__ == "__main__":
     # 起動時にインデックスを読み込む(失敗時は早期に検知)
     rag_index.load()
     try:
-        # Entra ID で発行された JWT を検証する
-        # - CLIENT_ID: Bot Service が送ってくる token の aud(audience)
-        # - TENANT_ID: token 発行元テナントの限定
-        # - CLIENT_SECRET: Agent 側が outbound 通信時に使用
-        start_server(
-            AGENT_APP,
-            AgentAuthConfiguration(
-                anonymous_allowed=False,
-                client_id=os.getenv("CLIENT_ID"),
-                client_secret=os.getenv("CLIENT_SECRET"),
-                tenant_id=os.getenv("TENANT_ID"),
-            ),
-        )
+        # SERVICE_AUTH_CONFIG はモジュール先頭で定義済み
+        start_server(AGENT_APP, SERVICE_AUTH_CONFIG)
     except Exception as error:
         raise error
