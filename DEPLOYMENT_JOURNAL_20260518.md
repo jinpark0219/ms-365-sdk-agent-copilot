@@ -31,8 +31,9 @@ App Service 배포 + Entra ID 인증 + Bot Service 등록 + JWT 인증 강화.
 | 1 | LangChain `create_agent` 도입 | ❌ 보류 | Co-agent 아키텍처상 불필요 — Copilot이 위에서 라우팅하므로 내부 도구 라우팅 중복 |
 | 2 | Entra ID 앱 등록 | ✅ 완료 | Client ID / Secret / Tenant ID 모두 `.env`와 App Service 환경 변수에 저장 |
 | 3 | App Service 배포 | ✅ 완료 | 시행착오 5건. 최종적으로 `GET /api/messages → 200 OK` 응답 확인 |
-| 4 | Azure Bot Service + 웹 채팅 테스트 | ✅ 완료 (인증 강화 직후) | 마지막 시행착오: `anonymous_allowed=True` 함정 |
+| 4 | Azure Bot Service + 웹 채팅 테스트 | ✅ 완료 | 일본어 답변 + 출처 부착 정상 확인 |
 | 5 | JWT 인증을 Entra ID 자격증명으로 강화 | ✅ 완료 | `anonymous_allowed=False` + CLIENT_ID/SECRET/TENANT_ID 전달 |
+| 6 | outbound 인증용 MsalConnectionManager 주입 | ✅ 완료 | 별도 패키지 + SERVICE_CONNECTION 등록 |
 
 **총평**: 코드 자체는 거의 그대로지만, "왜 Azure에서만 안 도는지"를 한 단계씩 해체하는 데 하루가 거의 다 쓰임. 회사 PC에서 재현할 때는 이 일지 따라가면 1-2시간 안에 끝낼 수 있을 것.
 
@@ -848,14 +849,45 @@ GitHub:      CollabCentralOrganization/m365-copilot-agent (이미 존재)
 
 ---
 
+## ✅ 최종 검증 완료
+
+**2026-05-18 — Bot Service Web Chat 실측**
+
+질문 (일본어):
+```
+年休は何日もらえますか?
+```
+
+응답 (Markdown 렌더링됨):
+```
+年休の付与基準は以下の通りです：
+  • 入社1年目：15日
+  • 2年目以降毎年1日追加（最大25日）
+
+出典: 1.1 年次有給休暇
+```
+
+검증된 동작:
+- ✅ Bot Service JWT 전송 → 우리 서버 JWT 검증 통과
+- ✅ outbound channel 통신 정상 (MsalConnectionManager 작동)
+- ✅ RAG로 HR 정책 문서 정확히 검색
+- ✅ Foundry `gpt-4o-mini`가 일본어 응답 생성
+- ✅ 출처 섹션 자동 부착 (`1.1 年次有給休暇`)
+- ✅ Markdown 형식 (bullet 리스트) 렌더링
+
+**오늘 PoC 운영 직전 단계까지 완료. 회사 PC 이관 준비 완료.**
+
+---
+
 ## 다음 단계
 
 ### 즉시 (오늘~내일)
 
 | 우선순위 | 작업 | 비고 |
 |---|---|---|
-| 1 | Bot Service Web Chat에서 `年休は何日もらえますか?` 일본어 동작 검증 | 마지막 push 배포 후 |
-| 2 | 작동 확인 후 본 일지에 "최종 검증 완료" 추가 | |
+| ~~1~~ | ~~Bot Service Web Chat 일본어 동작 검증~~ | ✅ 완료 |
+| ~~2~~ | ~~본 일지에 "최종 검증 완료" 추가~~ | ✅ 완료 |
+| 1 | 추가 질문으로 RAG 폭 검증 (HR + IT 양쪽) | "VPN 접続方法は?" 등 |
 
 ### 단기 (1주 내)
 
