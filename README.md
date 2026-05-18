@@ -428,7 +428,6 @@ pip install -r requirements.txt
 | Application Insights 連携・構造化ログ | 🔲 未着手 |
 | RAG スコアしきい値による無関連質問のガード | 🔲 未着手 |
 | マルチターン会話メモリ | 🔲 未着手 |
-| AWS 側エージェントとの A2A 連携 | 🔲 別チーム担当 |
 | FAISS → Azure AI Search 移行 (大規模化時) | 🔲 未着手 |
 
 ---

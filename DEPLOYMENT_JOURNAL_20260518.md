@@ -1236,7 +1236,6 @@ GitHub:      CollabCentralOrganization/m365-copilot-agent (이미 존재)
 □ 실제 사내 문서로 인덱스 교체 (HR + IT)
 □ Teams 채널 활성화 검토
 □ Copilot Studio 통합 (M365 Admin 협업)
-□ A2A 연계 (AWS 측 팀과)
 ```
 
 ### 시간 예상
@@ -1342,7 +1341,6 @@ GitHub:      CollabCentralOrganization/m365-copilot-agent (이미 존재)
 |---|---|---|
 | 7 | Teams 채널 활성화 | M365 Admin 협업 |
 | 8 | Copilot Studio 통합 | 회사 라이선스 확인 |
-| 9 | A2A 프로토콜로 AWS 팀 에이전트와 연계 | 본 프로젝트 핵심 목적 |
 
 ### 장기 (PoC → 운영)
 
